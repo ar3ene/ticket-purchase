@@ -178,3 +178,6 @@ credentials.json
 # Lock files (except poetry.lock)
 *.lock
 !poetry.lock
+
+# Dependencies 
+node_modules/
