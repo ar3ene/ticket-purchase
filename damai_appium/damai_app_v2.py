@@ -7,9 +7,11 @@ __Created__ = 2025/09/13 19:27
 """
 
 import time
+from typing import Tuple
 from appium import webdriver
 from appium.options.common.base import AppiumOptions
 from appium.webdriver.common.appiumby import AppiumBy
+from appium.webdriver.webdriver import WebDriver as AppiumWebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -21,12 +23,13 @@ from config import Config
 class DamaiBot:
     def __init__(self):
         self.config = Config.load_config()
-        self.driver = None
-        self.wait = None
-        self._setup_driver()
+        # 明确类型，避免 Optional 成员访问告警
+        self.driver: AppiumWebDriver
+        self.wait: WebDriverWait
+        self.driver, self.wait = self._setup_driver()
 
-    def _setup_driver(self):
-        """初始化驱动配置"""
+    def _setup_driver(self) -> Tuple[AppiumWebDriver, WebDriverWait]:
+        """初始化驱动配置并返回 (driver, wait)"""
         capabilities = {
             "platformName": "Android",  # 操作系统
             "platformVersion": "14",  # 系统版本
@@ -49,10 +52,12 @@ class DamaiBot:
 
         device_app_info = AppiumOptions()
         device_app_info.load_capabilities(capabilities)
-        self.driver = webdriver.Remote(self.config.server_url, options=device_app_info)
+        driver: AppiumWebDriver = webdriver.Remote(  # type: ignore[attr-defined]
+            self.config.server_url, options=device_app_info
+        )
 
         # 更激进的性能优化设置
-        self.driver.update_settings({
+        driver.update_settings({
             "waitForIdleTimeout": 0,  # 空闲时间，0 表示不等待，让 UIAutomator2 不等页面“空闲”再返回
             "actionAcknowledgmentTimeout": 0,  # 禁止等待动作确认
             "keyInjectionDelay": 0,  # 禁止输入延迟
@@ -63,7 +68,8 @@ class DamaiBot:
         })
 
         # 极短的显式等待，抢票场景下速度优先
-        self.wait = WebDriverWait(self.driver, 2)  # 从5秒减少到2秒
+        wait = WebDriverWait(driver, 2)  # 从5秒减少到2秒
+        return driver, wait
 
     def ultra_fast_click(self, by, value, timeout=1.5):
         """超快速点击 - 适合抢票场景"""
